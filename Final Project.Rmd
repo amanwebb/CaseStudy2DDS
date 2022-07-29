@@ -1,0 +1,364 @@
+---
+title: '6306 Final Project'
+output: html_document
+date: '2022-07-29'
+---
+
+## Executive Summary
+DDSAnalytics is an analytics company that specializes in talent management solutions for Fortune 100 companies. Talent management is defined as the iterative process of developing and retaining employees. It may include workforce planning, employee training programs, identifying high-potential employees and reducing/preventing voluntary employee turnover (attrition). To gain a competitive edge over its competition, DDSAnalytics is planning to leverage data science for talent management. The executive leadership has identified predicting employee turnover as its first application of data science for talent management. Before the business green lights the project, they have tasked me to conduct an analysis of existing employee data. 
+
+## Introduction
+
+The dataset provided included 870 observations and 36 features. Below, you will find the models that I built to predict attrition, as well as salary. We identified key variables that play the biggest roles in predicting both attrition and salary. The top three for attrition, that I found, were NumCompaniesWorked, YearsSinceLastPromotion, DistanceFromHome. The top three for salary were JobLevel, JobRole, TotalWorkingYears.
+
+
+
+
+```{r}
+library(tidyverse)
+library(naniar)
+library(corrplot)
+library(ggplot2)
+library(e1071)
+library(caret)
+library(class)
+library(GGally)
+```
+
+
+
+```{r}
+# Read in the frito
+frito <- read.csv(file.choose(), header = TRUE)
+frito
+
+summary(frito)
+
+# Check for missing data
+gg_miss_var(frito)
+
+```
+
+
+```{r}
+# convert to factors
+frito$EnvironmentSatisfaction <- factor(frito$EnvironmentSatisfaction)
+frito$JobInvolvement <- factor(frito$JobInvolvement)
+frito$JobLevel <- factor(frito$JobLevel)
+frito$JobSatisfaction <- factor(frito$JobSatisfaction)
+frito$PerformanceRating <- factor(frito$PerformanceRating)
+frito$RelationshipSatisfaction <- factor(frito$RelationshipSatisfaction)
+frito$WorkLifeBalance <- factor(frito$WorkLifeBalance)
+frito$StockOptionLevel <- factor(frito$StockOptionLevel)
+
+# Split data into categorical and numeric 
+categoricalCols = frito %>% select_if(is.factor)
+numericCols = frito %>% select_if(is.numeric)
+
+# visual representations of distributions of select variables that stand out to me
+ggplot(frito, aes(Attrition)) +
+  geom_bar(aes(fill = Attrition)) +
+  ggtitle('Attrition Distribution')
+
+ggplot(frito, aes(x=TotalWorkingYears))+
+  geom_histogram(color='darkblue', fill='lightblue', bins = 20) +
+  ggtitle('Total Years Working Distribution')
+
+ggplot(frito, aes(x=MonthlyIncome))+
+  geom_histogram(color='darkblue', fill='lightblue', bins = 20) +
+  ggtitle('Monthly Income Distribution')
+
+```
+
+
+```{r}
+# make this example reproducible
+set.seed(153)
+
+# use 70% of dataset as training set and 30% as test set
+sample <- sample(c(TRUE, FALSE), nrow(frito), replace = TRUE, prob = c(0.7, 0.3))
+train <- frito[sample, ]
+test <- frito[!sample, ]
+
+```
+
+
+```{r}
+# Filter data for numeric columns
+trainNum <- train %>% select_if(is.numeric)
+testNum <- test %>% select_if(is.numeric)
+
+# Append 'Attrition' column
+trainNum$Attrition <- train$Attrition
+testNum$Attrition <- test$Attrition
+
+# Run the algorithm
+knn <- knn(trainNum[, 1:15], 
+           testNum[, 1:15], 
+           trainNum$Attrition, 
+           prob = TRUE, 
+           k = 7)
+
+# Confusion Matrix
+confusionMatrix(table(knn, testNum$Attrition))
+
+# 80% Accuracy
+
+```
+
+
+
+```{r}
+# Naive Bayes model
+model <- naiveBayes(Attrition ~ ., data = train)
+
+# Make predictions
+pred <- predict(model, test)
+
+# Confusion Matrix
+confusionMatrix(table(pred, test$Attrition))
+
+# 85% Accuracy
+
+```
+
+```{r}
+# MLR with all
+
+# Make a column for attrition dummy 
+trainNum$attritionDummy <- ifelse(trainNum$Attrition == 'Yes', 1, 0)
+
+# Drop Attrition column
+trainNum <- subset(trainNum, select = -c(Attrition))
+
+# Allows for difference of slopes is the interaction
+fit1 <- lm(attritionDummy ~ ., data = trainNum)
+fit1
+
+# View the results of MLR
+summary(fit1)
+
+# Intercept, NumCompaniesWorked, YearsSinceLastPromotion, DistanceFromHome
+
+# Confidence interval for predictors
+confint(fit1)
+
+
+# MLR With top three best predictors
+fit2 <- lm(attritionDummy ~ NumCompaniesWorked + 
+             YearsSinceLastPromotion + 
+             DistanceFromHome, 
+           data = trainNum)
+fit2
+
+# View the results of MLR
+summary(fit2)
+
+# Confidence interval for predictors
+confint(fit2)
+
+
+
+```
+
+
+
+
+```{r}
+
+ggplot(frito, aes(x=NumCompaniesWorked))+
+  geom_histogram(color='darkblue', fill='lightblue', bins = 10) +
+  ggtitle('Number of Companies Worked Distribution')
+
+
+ggplot(frito, aes(x=YearsSinceLastPromotion))+
+  geom_histogram(color='darkblue', fill='lightblue', bins = 10) +
+  ggtitle('Years Since Last Promotion Distribution')
+
+ggplot(frito, aes(x=DistanceFromHome))+
+  geom_histogram(color='darkblue', fill='lightblue', bins = 10) +
+  ggtitle('Distance From Home Distribution')
+
+```
+
+
+
+```{r}
+frito %>% select('DistanceFromHome', 'NumCompaniesWorked', 'YearsSinceLastPromotion', 'Attrition') %>% ggpairs(mapping = ggplot2::aes(colour=Attrition))
+
+```
+
+
+
+
+
+```{r}
+# Read in the data
+noAttrition <- read.csv(file.choose(), header = TRUE)
+noAttrition
+
+summary(noAttrition)
+
+# Check for missing data
+gg_miss_var(noAttrition)
+
+# convert to factors
+noAttrition$EnvironmentSatisfaction <- factor(noAttrition$EnvironmentSatisfaction)
+noAttrition$JobInvolvement <- factor(noAttrition$JobInvolvement)
+noAttrition$JobLevel <- factor(noAttrition$JobLevel)
+noAttrition$JobSatisfaction <- factor(noAttrition$JobSatisfaction)
+noAttrition$PerformanceRating <- factor(noAttrition$PerformanceRating)
+noAttrition$RelationshipSatisfaction <- factor(noAttrition$RelationshipSatisfaction)
+noAttrition$WorkLifeBalance <- factor(noAttrition$WorkLifeBalance)
+noAttrition$StockOptionLevel <- factor(noAttrition$StockOptionLevel)
+```
+
+
+```{r}
+
+# Make predictions
+pred <- predict(model, noAttrition)
+
+# View predictions
+pred
+
+# Make preditions a df
+attrition_pred <- as.data.frame(pred)
+
+# Add ID column
+attrition_pred['ID'] <- seq(1171, 1470)
+
+# Rearrange columns
+attrition_pred <- attrition_pred[, c(2, 1)]
+
+# Write to csv
+write.csv(attrition_pred,"C:\\Users\\austi\\Downloads\\Case2PredictionsWebbAttrition.csv", row.names = FALSE)
+
+
+```
+
+
+
+
+```{r}
+library("readxl")
+# Read in the data
+noSalary <- read_excel(file.choose())
+noSalary
+
+# convert to factors
+noSalary$EnvironmentSatisfaction <- factor(noSalary$EnvironmentSatisfaction)
+noSalary$JobInvolvement <- factor(noSalary$JobInvolvement)
+noSalary$JobLevel <- factor(noSalary$JobLevel)
+noSalary$JobSatisfaction <- factor(noSalary$JobSatisfaction)
+noSalary$PerformanceRating <- factor(noSalary$PerformanceRating)
+noSalary$RelationshipSatisfaction <- factor(noSalary$RelationshipSatisfaction)
+noSalary$WorkLifeBalance <- factor(noSalary$WorkLifeBalance)
+noAttrition$StockOptionLevel <- factor(noSalary$StockOptionLevel)
+
+```
+
+
+
+
+```{r}
+# MLR with all
+
+# Remove one level factors
+trainNoOneFactors = train %>% select(-c('EmployeeNumber', 'EmployeeCount', 
+                                        'Over18', 'StandardHours'))
+
+
+# Allows for difference of slopes is the interaction
+fit3 <- lm(MonthlyIncome ~ ., data = trainNoOneFactors)
+fit3
+
+# View the results of MLR
+summary(fit3)
+
+# Intercept, JobLevel, JobRole, TotalWorkingYears
+
+# Confidence interval for predictors
+confint(fit3)
+
+
+# MLR With top three best predictors
+fit4 <- lm(MonthlyIncome ~ JobLevel +
+             JobRole +
+             TotalWorkingYears,
+           data = trainNoOneFactors)
+fit4
+
+# View the results of MLR
+summary(fit4)
+
+# Confidence interval for predictors
+confint(fit4)
+
+```
+
+
+
+```{r}
+
+# plot of job level vs income
+ggplot(trainNoOneFactors, aes(JobLevel, MonthlyIncome)) +
+  geom_jitter() +
+  ggtitle('Job level vs Income')
+
+# plot of job role vs income
+ggplot(trainNoOneFactors, aes(JobRole, MonthlyIncome)) +
+  geom_jitter() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  ggtitle('Job Role vs Income')
+
+# plot of working years vs income
+ggplot(trainNoOneFactors, aes(TotalWorkingYears, MonthlyIncome)) +
+  geom_jitter() +
+  ggtitle('Years Working vs Income')
+
+```
+
+
+```{r}
+
+# Make predictions
+salaryPred <- predict(fit4, noSalary)
+
+# View predictions
+salaryPred
+
+# Make preditions a df
+salary_pred <- as.data.frame(salaryPred)
+
+# Add ID column
+salary_pred['ID'] <- seq(871, 1170)
+
+# Rearrange columns
+salary_pred <- salary_pred[, c(2, 1)]
+
+RMSE(trainNoOneFactors$MonthlyIncome, salaryPred)
+
+# Write to csv
+write.csv(salary_pred,"C:\\Users\\austi\\Downloads\\Case2PredictionsWebbSalary.csv", row.names = FALSE)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
