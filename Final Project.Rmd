@@ -23,6 +23,9 @@ key variables that play the biggest roles in predicting both attrition and salar
 The top three for attrition, that I found, were NumCompaniesWorked, YearsSinceLastPromotion, 
 DistanceFromHome. The top three for salary were JobLevel, JobRole, TotalWorkingYears.
 
+## Youtube Video
+https://www.youtube.com/watch?v=XTTvGKo7Sp8&ab_channel=AustinWebb
+
 
 
 
