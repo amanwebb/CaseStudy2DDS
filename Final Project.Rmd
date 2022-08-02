@@ -26,6 +26,9 @@ DistanceFromHome. The top three for salary were JobLevel, JobRole, TotalWorkingY
 ## Youtube Video
 https://www.youtube.com/watch?v=XTTvGKo7Sp8&ab_channel=AustinWebb
 
+## Shiny App
+https://austin-webb.shinyapps.io/Frito_Lay_Project/
+
 
 
 
